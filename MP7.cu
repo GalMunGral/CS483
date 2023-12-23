@@ -6,27 +6,33 @@
 #define BLOCK_SIZE 1024
 #define HISTO_GRID_SIZE 5
 
-#define wbCheck(stmt)                                                     \
-  do {                                                                    \
-    cudaError_t err = stmt;                                               \
-    if (err != cudaSuccess) {                                             \
-      wbLog(ERROR, "Failed to run stmt ", #stmt);                         \
-      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err));      \
-      return -1;                                                          \
-    }                                                                     \
+#define wbCheck(stmt)                                                \
+  do                                                                 \
+  {                                                                  \
+    cudaError_t err = stmt;                                          \
+    if (err != cudaSuccess)                                          \
+    {                                                                \
+      wbLog(ERROR, "Failed to run stmt ", #stmt);                    \
+      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err)); \
+      return -1;                                                     \
+    }                                                                \
   } while (0)
 
 //@@ insert code here
-__global__ void float2uchar(float *floatImage, unsigned char *ucharImage, int size) {
+__global__ void float2uchar(float *floatImage, unsigned char *ucharImage, int size)
+{
   const int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < size) {
+  if (i < size)
+  {
     ucharImage[i] = 255 * floatImage[i];
   }
 }
 
-__global__ void rgb2gray(unsigned char *ucharImage, unsigned char *grayImage, int size) {
+__global__ void rgb2gray(unsigned char *ucharImage, unsigned char *grayImage, int size)
+{
   const int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < size) {
+  if (i < size)
+  {
     unsigned char r = ucharImage[3 * i];
     unsigned char g = ucharImage[3 * i + 1];
     unsigned char b = ucharImage[3 * i + 2];
@@ -34,27 +40,32 @@ __global__ void rgb2gray(unsigned char *ucharImage, unsigned char *grayImage, in
   }
 }
 
-__global__ void histo_kernel(unsigned char *grayImage, int *histo, int size) {
+__global__ void histo_kernel(unsigned char *grayImage, int *histo, int size)
+{
   __shared__ int privateHisto[HISTOGRAM_LENGTH];
-  if (threadIdx.x < HISTOGRAM_LENGTH) {
+  if (threadIdx.x < HISTOGRAM_LENGTH)
+  {
     privateHisto[threadIdx.x] = 0;
   }
   __syncthreads();
 
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   const int stride = blockDim.x * gridDim.x;
-  while (i < size) {
+  while (i < size)
+  {
     atomicAdd(&privateHisto[grayImage[i]], 1);
     i += stride;
   }
   __syncthreads();
 
-  if (threadIdx.x < HISTOGRAM_LENGTH) {
+  if (threadIdx.x < HISTOGRAM_LENGTH)
+  {
     atomicAdd(&histo[threadIdx.x], privateHisto[threadIdx.x]);
   }
 }
 
-__global__ void cdf_kernel(int *histo, float *cdf, int size) {
+__global__ void cdf_kernel(int *histo, float *cdf, int size)
+{
   __shared__ float cdf_s[HISTOGRAM_LENGTH];
 
   const int i = threadIdx.x;
@@ -63,18 +74,22 @@ __global__ void cdf_kernel(int *histo, float *cdf, int size) {
   cdf_s[i] = histo[i] / (1.0 * size);
   cdf_s[i + BlockSize] = histo[i + BlockSize] / (1.0 * size);
 
-  for (int stride = 1; stride <= BlockSize; stride *= 2) {
+  for (int stride = 1; stride <= BlockSize; stride *= 2)
+  {
     __syncthreads();
     int index = (i + 1) * 2 * stride - 1;
-    if (index < HISTOGRAM_LENGTH) {
+    if (index < HISTOGRAM_LENGTH)
+    {
       cdf_s[index] += cdf_s[index - stride];
     }
   }
 
-  for (int stride = BlockSize / 2; stride >= 1; stride /= 2) {
+  for (int stride = BlockSize / 2; stride >= 1; stride /= 2)
+  {
     __syncthreads();
     int index = (i + 1) * 2 * stride - 1;
-    if (index + stride < 2 * BlockSize) {
+    if (index + stride < 2 * BlockSize)
+    {
       cdf_s[index + stride] += cdf_s[index];
     }
   }
@@ -84,23 +99,28 @@ __global__ void cdf_kernel(int *histo, float *cdf, int size) {
   cdf[i + BlockSize] = cdf_s[i + BlockSize];
 }
 
-__device__ float clamp(float x, float start, float end) {
+__device__ float clamp(float x, float start, float end)
+{
   return min(max(x, start), end);
 }
 
-__device__ unsigned char correct_color(unsigned char val, float *cdf) {
+__device__ unsigned char correct_color(unsigned char val, float *cdf)
+{
   const float cdfmin = cdf[0];
   return clamp(255 * (cdf[val] - cdfmin) / (1.0 - cdfmin), 0.0f, 255.0f);
 }
 
-__global__ void equalize(unsigned char *ucharImage, float *floatImage, float *cdf, int size) {
+__global__ void equalize(unsigned char *ucharImage, float *floatImage, float *cdf, int size)
+{
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < size) {
+  if (i < size)
+  {
     floatImage[i] = correct_color(ucharImage[i], cdf) / 255.0;
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   wbArg_t args;
   int imageWidth;
   int imageHeight;
@@ -135,7 +155,7 @@ int main(int argc, char **argv) {
   //@@ insert code here
   const int grayImageSize = imageWidth * imageHeight;
   const int rgbImageSize = imageWidth * imageHeight * imageChannels;
-  
+
   wbCheck(cudaMalloc((void **)&floatImage, rgbImageSize * sizeof(float)));
   wbCheck(cudaMalloc((void **)&ucharImage, rgbImageSize));
   wbCheck(cudaMalloc((void **)&grayImage, grayImageSize));

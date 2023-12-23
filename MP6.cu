@@ -9,30 +9,37 @@
 
 #define BLOCK_SIZE 1024 //@@ You can change this
 
-#define wbCheck(stmt)                                                     \
-  do {                                                                    \
-    cudaError_t err = stmt;                                               \
-    if (err != cudaSuccess) {                                             \
-      wbLog(ERROR, "Failed to run stmt ", #stmt);                         \
-      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err));      \
-      return -1;                                                          \
-    }                                                                     \
+#define wbCheck(stmt)                                                \
+  do                                                                 \
+  {                                                                  \
+    cudaError_t err = stmt;                                          \
+    if (err != cudaSuccess)                                          \
+    {                                                                \
+      wbLog(ERROR, "Failed to run stmt ", #stmt);                    \
+      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err)); \
+      return -1;                                                     \
+    }                                                                \
   } while (0)
 
-__global__ void addBlockSum(float *output, float *sum, int len) {
+__global__ void addBlockSum(float *output, float *sum, int len)
+{
   int i = blockIdx.x * 2 * BLOCK_SIZE + threadIdx.x;
-  if (blockIdx.x > 0) {
-    if (i < len) output[i] += sum[blockIdx.x - 1];
-    if (i + BLOCK_SIZE < len) output[i + BLOCK_SIZE] += sum[blockIdx.x - 1];
+  if (blockIdx.x > 0)
+  {
+    if (i < len)
+      output[i] += sum[blockIdx.x - 1];
+    if (i + BLOCK_SIZE < len)
+      output[i + BLOCK_SIZE] += sum[blockIdx.x - 1];
   }
 }
 
-__global__ void scan(float *input, float *output, float *sum, int len) {
+__global__ void scan(float *input, float *output, float *sum, int len)
+{
   //@@ Modify the body of this function to complete the functionality of
   //@@ the scan on the device
   //@@ You may need multiple kernel calls; write your kernels before this
   //@@ function and call them from the host
-  
+
   __shared__ float partial[2 * BLOCK_SIZE];
 
   int i = blockIdx.x * 2 * BLOCK_SIZE + threadIdx.x;
@@ -40,35 +47,43 @@ __global__ void scan(float *input, float *output, float *sum, int len) {
   partial[threadIdx.x] = i < len ? input[i] : 0.0f;
   partial[threadIdx.x + BLOCK_SIZE] = i + BLOCK_SIZE < len ? input[i + BLOCK_SIZE] : 0.0f;
 
-  for (int stride = 1; stride <= BLOCK_SIZE; stride *= 2) {
+  for (int stride = 1; stride <= BLOCK_SIZE; stride *= 2)
+  {
     __syncthreads();
     int index = (threadIdx.x + 1) * 2 * stride - 1;
-    if (index < 2 * BLOCK_SIZE) {
+    if (index < 2 * BLOCK_SIZE)
+    {
       partial[index] += partial[index - stride];
     }
   }
-  for (int stride = BLOCK_SIZE / 2; stride >= 1; stride /= 2) {
+  for (int stride = BLOCK_SIZE / 2; stride >= 1; stride /= 2)
+  {
     __syncthreads();
     int index = (threadIdx.x + 1) * 2 * stride - 1;
-    if (index + stride < 2 * BLOCK_SIZE) {
+    if (index + stride < 2 * BLOCK_SIZE)
+    {
       partial[index + stride] += partial[index];
     }
   }
 
   __syncthreads();
 
-  if (i < len) {
+  if (i < len)
+  {
     output[i] = partial[threadIdx.x];
   }
-  if (i + BLOCK_SIZE < len) {
+  if (i + BLOCK_SIZE < len)
+  {
     output[i + BLOCK_SIZE] = partial[threadIdx.x + BLOCK_SIZE];
   }
-  if (threadIdx.x == 0 && sum) {
+  if (threadIdx.x == 0 && sum)
+  {
     sum[blockIdx.x] = partial[2 * BLOCK_SIZE - 1];
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   wbArg_t args;
   float *hostInput;  // The input 1D list
   float *hostOutput; // The output list

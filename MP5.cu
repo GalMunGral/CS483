@@ -6,17 +6,20 @@
 
 #define BLOCK_SIZE 512 //@@ You can change this
 
-#define wbCheck(stmt)                                                     \
-  do {                                                                    \
-    cudaError_t err = stmt;                                               \
-    if (err != cudaSuccess) {                                             \
-      wbLog(ERROR, "Failed to run stmt ", #stmt);                         \
-      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err));      \
-      return -1;                                                          \
-    }                                                                     \
+#define wbCheck(stmt)                                                \
+  do                                                                 \
+  {                                                                  \
+    cudaError_t err = stmt;                                          \
+    if (err != cudaSuccess)                                          \
+    {                                                                \
+      wbLog(ERROR, "Failed to run stmt ", #stmt);                    \
+      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err)); \
+      return -1;                                                     \
+    }                                                                \
   } while (0)
-  
-__global__ void total(float *input, float *output, int len) {
+
+__global__ void total(float *input, float *output, int len)
+{
   //@@ Load a segment of the input vector into shared memory
   //@@ Traverse the reduction tree
   //@@ Write the computed sum of the block to the output vector at the
@@ -26,25 +29,31 @@ __global__ void total(float *input, float *output, int len) {
   const int start = blockIdx.x * 2 * BLOCK_SIZE;
   const int tx = threadIdx.x;
 
-  if (start + tx < len) {
+  if (start + tx < len)
+  {
     partial[tx] = input[start + tx];
   }
-  if (start + BLOCK_SIZE + tx < len) {
+  if (start + BLOCK_SIZE + tx < len)
+  {
     partial[BLOCK_SIZE + tx] = input[start + BLOCK_SIZE + tx];
   }
 
-  for (int stride = BLOCK_SIZE; stride; stride /= 2) {
+  for (int stride = BLOCK_SIZE; stride; stride /= 2)
+  {
     __syncthreads();
-    if (tx < stride) {
+    if (tx < stride)
+    {
       partial[tx] += partial[tx + stride];
     }
   }
-  if (tx == 0) {
+  if (tx == 0)
+  {
     output[blockIdx.x] = partial[0];
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   int ii;
   wbArg_t args;
   float *hostInput;  // The input 1D list
@@ -61,7 +70,8 @@ int main(int argc, char **argv) {
       (float *)wbImport(wbArg_getInputFile(args, 0), &numInputElements);
 
   numOutputElements = numInputElements / (BLOCK_SIZE << 1);
-  if (numInputElements % (BLOCK_SIZE << 1)) {
+  if (numInputElements % (BLOCK_SIZE << 1))
+  {
     numOutputElements++;
   }
   hostOutput = (float *)malloc(numOutputElements * sizeof(float));
@@ -75,8 +85,8 @@ int main(int argc, char **argv) {
 
   wbTime_start(GPU, "Allocating GPU memory.");
   //@@ Allocate GPU memory here
-  wbCheck(cudaMalloc((void **) &deviceInput, numInputElements * sizeof(float)));
-  wbCheck(cudaMalloc((void **) &deviceOutput, numOutputElements * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceInput, numInputElements * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceOutput, numOutputElements * sizeof(float)));
   wbTime_stop(GPU, "Allocating GPU memory.");
 
   wbTime_start(GPU, "Copying input memory to the GPU.");
@@ -102,7 +112,8 @@ int main(int argc, char **argv) {
    * recursively and support any size input. For simplicity, we do not
    * require that for this lab.
    ********************************************************************/
-  for (ii = 1; ii < numOutputElements; ii++) {
+  for (ii = 1; ii < numOutputElements; ii++)
+  {
     hostOutput[0] += hostOutput[ii];
   }
 

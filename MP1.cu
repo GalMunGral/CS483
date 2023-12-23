@@ -1,15 +1,17 @@
-// MP 1
 #include <wb.h>
 
-__global__ void vecAdd(float *in1, float *in2, float *out, int len) {
+__global__ void vecAdd(float *in1, float *in2, float *out, int len)
+{
   //@@ Insert code to implement vector addition here
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < len) {
+  if (i < len)
+  {
     out[i] = in1[i] + in2[i];
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   wbArg_t args;
   int inputLength;
   float *hostInput1;
@@ -33,9 +35,9 @@ int main(int argc, char **argv) {
 
   wbTime_start(GPU, "Allocating GPU memory.");
   //@@ Allocate GPU memory here
-  cudaMalloc((void **) &deviceInput1, inputLength * sizeof(float));
-  cudaMalloc((void **) &deviceInput2, inputLength * sizeof(float));
-  cudaMalloc((void **) &deviceOutput, inputLength * sizeof(float));
+  cudaMalloc((void **)&deviceInput1, inputLength * sizeof(float));
+  cudaMalloc((void **)&deviceInput2, inputLength * sizeof(float));
+  cudaMalloc((void **)&deviceOutput, inputLength * sizeof(float));
   wbTime_stop(GPU, "Allocating GPU memory.");
 
   wbTime_start(GPU, "Copying input memory to the GPU.");

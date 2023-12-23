@@ -1,34 +1,39 @@
-
 #include <wb.h>
 
-#define wbCheck(stmt)                                                     \
-  do {                                                                    \
-    cudaError_t err = stmt;                                               \
-    if (err != cudaSuccess) {                                             \
-      wbLog(ERROR, "Failed to run stmt ", #stmt);                         \
-      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err));      \
-      return -1;                                                          \
-    }                                                                     \
+#define wbCheck(stmt)                                                \
+  do                                                                 \
+  {                                                                  \
+    cudaError_t err = stmt;                                          \
+    if (err != cudaSuccess)                                          \
+    {                                                                \
+      wbLog(ERROR, "Failed to run stmt ", #stmt);                    \
+      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err)); \
+      return -1;                                                     \
+    }                                                                \
   } while (0)
 
 // Compute C = A * B
 __global__ void matrixMultiply(float *A, float *B, float *C, int numARows,
                                int numAColumns, int numBRows,
                                int numBColumns, int numCRows,
-                               int numCColumns) {
+                               int numCColumns)
+{
   //@@ Insert code to implement matrix multiplication here
   int row = blockIdx.y * blockDim.y + threadIdx.y;
   int col = blockIdx.x * blockDim.x + threadIdx.x;
-  if (row < numCRows && col < numCColumns) {
+  if (row < numCRows && col < numCColumns)
+  {
     float p = 0.0;
-    for (int i = 0; i < numBRows; ++i) {
+    for (int i = 0; i < numBRows; ++i)
+    {
       p += A[row * numAColumns + i] * B[i * numBColumns + col];
     }
     C[row * numCColumns + col] = p;
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   wbArg_t args;
   float *hostA; // The A matrix
   float *hostB; // The B matrix
@@ -56,15 +61,15 @@ int main(int argc, char **argv) {
   numCColumns = numBColumns;
   //@@ Allocate the hostC matrix
   wbTime_stop(Generic, "Importing data and creating memory on host");
-  hostC = (float *) malloc(numCRows * numCColumns * sizeof(float));
+  hostC = (float *)malloc(numCRows * numCColumns * sizeof(float));
   wbLog(TRACE, "The dimensions of A are ", numARows, " x ", numAColumns);
   wbLog(TRACE, "The dimensions of B are ", numBRows, " x ", numBColumns);
 
   wbTime_start(GPU, "Allocating GPU memory.");
   //@@ Allocate GPU memory here
-  wbCheck(cudaMalloc((void **) &deviceA, numARows * numAColumns * sizeof(float)));
-  wbCheck(cudaMalloc((void **) &deviceB, numBRows * numBColumns * sizeof(float)));
-  wbCheck(cudaMalloc((void **) &deviceC, numCRows * numCColumns * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceA, numARows * numAColumns * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceB, numBRows * numBColumns * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceC, numCRows * numCColumns * sizeof(float)));
   wbTime_stop(GPU, "Allocating GPU memory.");
 
   wbTime_start(GPU, "Copying input memory to the GPU.");

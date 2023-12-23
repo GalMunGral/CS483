@@ -1,14 +1,15 @@
-
 #include <wb.h>
 
-#define wbCheck(stmt)                                                     \
-  do {                                                                    \
-    cudaError_t err = stmt;                                               \
-    if (err != cudaSuccess) {                                             \
-      wbLog(ERROR, "Failed to run stmt ", #stmt);                         \
-      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err));      \
-      return -1;                                                          \
-    }                                                                     \
+#define wbCheck(stmt)                                                \
+  do                                                                 \
+  {                                                                  \
+    cudaError_t err = stmt;                                          \
+    if (err != cudaSuccess)                                          \
+    {                                                                \
+      wbLog(ERROR, "Failed to run stmt ", #stmt);                    \
+      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err)); \
+      return -1;                                                     \
+    }                                                                \
   } while (0)
 
 #define TILE_WIDTH 32
@@ -17,7 +18,8 @@
 __global__ void matrixMultiplyShared(float *A, float *B, float *C,
                                      int numARows, int numAColumns,
                                      int numBRows, int numBColumns,
-                                     int numCRows, int numCColumns) {
+                                     int numCRows, int numCColumns)
+{
   //@@ Insert code to implement matrix multiplication here
   //@@ You have to use shared memory for this MP
   __shared__ float M[TILE_WIDTH][TILE_WIDTH];
@@ -29,29 +31,39 @@ __global__ void matrixMultiplyShared(float *A, float *B, float *C,
 
   float p = 0;
 
-  for (int i = 0; i < numTiles; ++i) {
-    if (row < numARows && i * TILE_WIDTH + tx < numAColumns) {
+  for (int i = 0; i < numTiles; ++i)
+  {
+    if (row < numARows && i * TILE_WIDTH + tx < numAColumns)
+    {
       M[ty][tx] = A[row * numAColumns + (i * TILE_WIDTH + tx)];
-    } else {
+    }
+    else
+    {
       M[ty][tx] = 0;
     }
-    if (i * TILE_WIDTH + ty < numBRows && col < numBColumns) {
+    if (i * TILE_WIDTH + ty < numBRows && col < numBColumns)
+    {
       N[ty][tx] = B[(i * TILE_WIDTH + ty) * numBColumns + col];
-    } else {
+    }
+    else
+    {
       N[ty][tx] = 0;
     }
     __syncthreads();
-    for (int j = 0; j < TILE_WIDTH; ++j) {
+    for (int j = 0; j < TILE_WIDTH; ++j)
+    {
       p += M[ty][j] * N[j][tx];
     }
     __syncthreads();
   }
-  if (row < numCRows && col < numCColumns) {
+  if (row < numCRows && col < numCColumns)
+  {
     C[row * numCColumns + col] = p;
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   wbArg_t args;
   float *hostA; // The A matrix
   float *hostB; // The B matrix
@@ -78,7 +90,7 @@ int main(int argc, char **argv) {
   numCRows = numARows;
   numCColumns = numBColumns;
   //@@ Allocate the hostC matrix
-  hostC = (float *) malloc(numCRows * numCColumns * sizeof(float));
+  hostC = (float *)malloc(numCRows * numCColumns * sizeof(float));
   wbTime_stop(Generic, "Importing data and creating memory on host");
 
   wbLog(TRACE, "The dimensions of A are ", numARows, " x ", numAColumns);
@@ -86,9 +98,9 @@ int main(int argc, char **argv) {
 
   wbTime_start(GPU, "Allocating GPU memory.");
   //@@ Allocate GPU memory here
-  wbCheck(cudaMalloc((void **) &deviceA, numARows * numAColumns * sizeof(float)));
-  wbCheck(cudaMalloc((void **) &deviceB, numBRows * numBColumns * sizeof(float)));
-  wbCheck(cudaMalloc((void **) &deviceC, numCRows * numCColumns * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceA, numARows * numAColumns * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceB, numBRows * numBColumns * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceC, numCRows * numCColumns * sizeof(float)));
   wbTime_stop(GPU, "Allocating GPU memory.");
 
   wbTime_start(GPU, "Copying input memory to the GPU.");

@@ -1,14 +1,16 @@
 #include <wb.h>
 #include <iostream>
 
-#define wbCheck(stmt)                                                     \
-  do {                                                                    \
-    cudaError_t err = stmt;                                               \
-    if (err != cudaSuccess) {                                             \
-      wbLog(ERROR, "CUDA error: ", cudaGetErrorString(err));              \
-      wbLog(ERROR, "Failed to run stmt ", #stmt);                         \
-      return -1;                                                          \
-    }                                                                     \
+#define wbCheck(stmt)                                        \
+  do                                                         \
+  {                                                          \
+    cudaError_t err = stmt;                                  \
+    if (err != cudaSuccess)                                  \
+    {                                                        \
+      wbLog(ERROR, "CUDA error: ", cudaGetErrorString(err)); \
+      wbLog(ERROR, "Failed to run stmt ", #stmt);            \
+      return -1;                                             \
+    }                                                        \
   } while (0)
 
 //@@ Define any useful program-wide constants here
@@ -20,7 +22,8 @@ constexpr int INPUT_TILE_SIZE = TILE_SIZE + MASK_SIZE - 1;
 __constant__ float K[MASK_SIZE][MASK_SIZE][MASK_SIZE];
 
 __global__ void conv3d(float *input, float *output, const int z_size,
-                       const int y_size, const int x_size) {
+                       const int y_size, const int x_size)
+{
   //@@ Insert kernel code here
   __shared__ float M[INPUT_TILE_SIZE][INPUT_TILE_SIZE][INPUT_TILE_SIZE];
 
@@ -28,30 +31,39 @@ __global__ void conv3d(float *input, float *output, const int z_size,
   int tx = threadIdx.x, ty = threadIdx.y, tz = threadIdx.z;
   int x_o = bx * TILE_SIZE + tx, y_o = by * TILE_SIZE + ty, z_o = bz * TILE_SIZE + tz;
   int x_i = x_o - MASK_SIZE / 2, y_i = y_o - MASK_SIZE / 2, z_i = z_o - MASK_SIZE / 2;
-  
-  if (z_i >= 0 && z_i < z_size && y_i >= 0 && y_i < y_size && x_i >= 0 && x_i < x_size) {
+
+  if (z_i >= 0 && z_i < z_size && y_i >= 0 && y_i < y_size && x_i >= 0 && x_i < x_size)
+  {
     M[tz][ty][tx] = input[z_i * y_size * x_size + y_i * x_size + x_i];
-  } else {
+  }
+  else
+  {
     M[tz][ty][tx] = 0.0f;
   }
   __syncthreads();
 
-  if (tz < TILE_SIZE && ty < TILE_SIZE && tx < TILE_SIZE) {
+  if (tz < TILE_SIZE && ty < TILE_SIZE && tx < TILE_SIZE)
+  {
     float value = 0.0f;
-    for (int i = 0; i < MASK_SIZE; ++i) {
-      for (int j = 0; j < MASK_SIZE; ++j) {
-        for (int k = 0; k < MASK_SIZE; ++k) {
+    for (int i = 0; i < MASK_SIZE; ++i)
+    {
+      for (int j = 0; j < MASK_SIZE; ++j)
+      {
+        for (int k = 0; k < MASK_SIZE; ++k)
+        {
           value += M[tz + i][ty + j][tx + k] * K[i][j][k];
         }
       }
     }
-    if (z_o < z_size && y_o < y_size && x_o < x_size) {
+    if (z_o < z_size && y_o < y_size && x_o < x_size)
+    {
       output[z_o * y_size * x_size + y_o * x_size + x_o] = value;
     }
   }
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   wbArg_t args;
   int z_size;
   int y_size;
@@ -85,8 +97,8 @@ int main(int argc, char *argv[]) {
   //@@ Allocate GPU memory here
   // Recall that inputLength is 3 elements longer than the input data
   // because the first three elements were the dimensions
-  wbCheck(cudaMalloc((void **) &deviceInput, (inputLength - 3) * sizeof(float)));
-  wbCheck(cudaMalloc((void **) &deviceOutput, (inputLength - 3) * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceInput, (inputLength - 3) * sizeof(float)));
+  wbCheck(cudaMalloc((void **)&deviceOutput, (inputLength - 3) * sizeof(float)));
   wbTime_stop(GPU, "Doing GPU memory allocation");
 
   wbTime_start(Copy, "Copying data to the GPU");

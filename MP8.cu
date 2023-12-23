@@ -1,23 +1,28 @@
 #include <wb.h>
 
-#define wbCheck(stmt)                                                     \
-  do {                                                                    \
-    cudaError_t err = stmt;                                               \
-    if (err != cudaSuccess) {                                             \
-      wbLog(ERROR, "Failed to run stmt ", #stmt);                         \
-      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err));      \
-      return -1;                                                          \
-    }                                                                     \
+#define wbCheck(stmt)                                                \
+  do                                                                 \
+  {                                                                  \
+    cudaError_t err = stmt;                                          \
+    if (err != cudaSuccess)                                          \
+    {                                                                \
+      wbLog(ERROR, "Failed to run stmt ", #stmt);                    \
+      wbLog(ERROR, "Got CUDA error ...  ", cudaGetErrorString(err)); \
+      return -1;                                                     \
+    }                                                                \
   } while (0)
 
 __global__ void spmvJDSKernel(float *out, int *matColStart, int *matCols,
                               int *matRowPerm, int *matRows,
-                              float *matData, float *vec, int dim) {
+                              float *matData, float *vec, int dim)
+{
   //@@ insert spmv kernel for jds format
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < dim) {
+  if (i < dim)
+  {
     float p = 0.0f;
-    for (int j = 0; j < matRows[i]; ++j) {
+    for (int j = 0; j < matRows[i]; ++j)
+    {
       p += matData[matColStart[j] + i] * vec[matCols[matColStart[j] + i]];
     }
     out[matRowPerm[i]] = p;
@@ -26,15 +31,17 @@ __global__ void spmvJDSKernel(float *out, int *matColStart, int *matCols,
 
 static void spmvJDS(float *out, int *matColStart, int *matCols,
                     int *matRowPerm, int *matRows, float *matData,
-                    float *vec, int dim) {
+                    float *vec, int dim)
+{
 
   //@@ invoke spmv kernel for jds format
-  spmvJDSKernel<<<(dim - 1) / 1024 + 1, 1024>>>(out, matColStart, matCols, 
-                                                matRowPerm, matRows, 
+  spmvJDSKernel<<<(dim - 1) / 1024 + 1, 1024>>>(out, matColStart, matCols,
+                                                matRowPerm, matRows,
                                                 matData, vec, dim);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   wbArg_t args;
   int *hostCSRCols;
   int *hostCSRRows;
